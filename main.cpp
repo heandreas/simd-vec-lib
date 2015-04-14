@@ -25,29 +25,44 @@ void fillFloatArrayRandom(float* values, size_t numElements, float min = 0, floa
     std::default_random_engine generator;
     std::uniform_real_distribution<float> distribution(min, max);
 
-    for (int i = 0; i < numElements; i++)
+    for (size_t i = 0; i < numElements; i++)
     {
         values[i] = distribution(generator);
     }
 }
 
-float computeSum(float* valuesIn, size_t numElements)
+float computeAverage(float* valuesIn, size_t numElements)
 {
-    float sum = 0;
+    double sum = 0;
     for (size_t i = 0; i < numElements; i++)
-        sum += valuesIn[i];
-    return sum;
+        sum += (double)valuesIn[i];
+    return sum / numElements;
 }
 
-float computeSumSimd(float* valuesIn, size_t numElements)
+struct ComputeAverageAccu
 {
-    vec_simd<1> sum(0.0f), v;
-    for (size_t i = 0; i < numElements; i+=4)
-    {
-        v.load(&valuesIn[i]);
-        sum += v;
-    }
-    return sum.horizontalAdd()[0];
+	vec_simd<1> sum = vec_simd<1>(0.0f);
+	vec_simd<1> offset;
+	float* values;
+	ComputeAverageAccu(float* values) : values(values) {}
+	
+	void loadData(unsigned int i) { offset.load(values + i); }
+	void loadRemainingData(unsigned int i, unsigned int numElements)
+	{
+		offset.setScalars(
+			[&](unsigned int x) -> float& { return values[i + x]; },
+			numElements, 0.0f);
+	}
+	
+	void accumulate(int) { sum += offset; }
+};
+
+float computeAverageSimd(float* valuesIn, size_t numElements)
+{
+	ComputeAverageAccu accu(valuesIn);
+	SimdUtils::accumulate(accu, numElements);
+	accu.sum /= vec_simd<1>(numElements);
+    return accu.sum.horizontalAdd()[0];
 }
 
 void computeSquareRootsSimd(vector<float>& in, vector<float>& out, size_t n)
@@ -144,7 +159,7 @@ void normalizeVecsSimdCond(const vec3fArray& in, vec3fArray& out, size_t n)
     }
 }
 
-void normalizeVecsSimd2(vec3fArray& in, vec3fArray& out, unsigned int n)
+void normalizeVecsSimd2(vec3fArray& in, vec3fArray& out, size_t n)
 {
     SimdUtils::Normalize3DMapper mapper(in.data(), out.data());
     SimdUtils::mapVectors<SimdUtils::Normalize3DMapper, 3>(mapper, n);
@@ -164,29 +179,29 @@ int main()
     fillFloatArrayRandom(valuesIn.data(), numElements);
 
     benchmarkhelper::benchmark(5, computeSquareRoots, valuesIn, valuesOut, numElements);
-    std::cout << computeSum(valuesOut.data(), numElements) << std::endl;
+    std::cout << computeAverage(valuesOut.data(), numElements) << std::endl;
 
     memset(valuesOut.data(), 0, numElements * sizeof(float));
 
     benchmarkhelper::benchmark(5, computeSquareRootsSimd, valuesIn, valuesOut, numElements);
-    std::cout << computeSum(valuesOut.data(), numElements) << std::endl;
+    std::cout << computeAverageSimd(valuesOut.data(), numElements) << std::endl;
 
     memset(valuesOut.data(), 0, numElements * sizeof(float));
 
     benchmarkhelper::benchmark(5, computeSquareRootsNoAutoVectorization, valuesIn, valuesOut, numElements);
-    std::cout << computeSum(valuesOut.data(), numElements) << std::endl;
+    std::cout << computeAverage(valuesOut.data(), numElements) << std::endl;
 
     memset(valuesOut.data(), 0, numElements * sizeof(float));
 
     fillFloatArrayRandom(valuesIn.data(), numElements, -100.0f);
 
     benchmarkhelper::benchmark(5, computeSqrtsConditional, valuesIn, valuesOut, numElements);
-    std::cout << computeSum(valuesOut.data(), numElements) << std::endl;
+    std::cout << computeAverage(valuesOut.data(), numElements) << std::endl;
 
     memset(valuesOut.data(), 0, numElements * sizeof(float));
 
     benchmarkhelper::benchmark(5, computeSqrtsConditionalSimd, valuesIn, valuesOut, numElements);
-    std::cout << computeSum(valuesOut.data(), numElements) << std::endl;
+    std::cout << computeAverage(valuesOut.data(), numElements) << std::endl;
 
     benchmarkhelper::benchmark(5, normalizeVecsSimdCond, vecsIn, vecsOut, numElements);
 
@@ -200,7 +215,7 @@ int main()
 
     memset(vecsOut.data(), 0, numElements * sizeof(vec3f));
 
-    benchmarkhelper::benchmark(5, normalizeVecsSimd2, vecsIn, vecsOut, (unsigned int)numElements);
+    benchmarkhelper::benchmark(5, normalizeVecsSimd2, vecsIn, vecsOut, numElements);
 
     while (true) {}
 

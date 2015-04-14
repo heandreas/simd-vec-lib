@@ -22,11 +22,11 @@ class SimdUtils
 {
 public:
     //! Performs mask ? v1 : v2 for each component and returns the result.
-    template<int D>
+    template<unsigned int D>
     Inline static vec_simd<D> choose(const vec_simd<1>& mask, const vec_simd<D>& v1, const vec_simd<D>& v2)
     {
         vec_simd<D> out;
-        StaticFor<0, D>::step([&mask, &v1, &v2, &out](int d)
+        StaticFor<0, D>::step([&mask, &v1, &v2, &out](unsigned int d)
         {
 #ifdef USE_AVX
             out.componentRegisters[d] = _mm256_blendv_ps(v2.componentRegisters[d], v1.componentRegisters[d], mask.componentRegisters[0]);
@@ -39,7 +39,7 @@ public:
         return out;
     }
 
-    template<class Mapper, int D>
+    template<class Mapper, unsigned int D>
     Inline static void mapVectors(Mapper& mapper, unsigned int numElements)
     {
         vec_simd<D> currVector;
@@ -79,7 +79,7 @@ public:
     };
 
     template<class Accumulator>
-    Inline static void mapAndSumVectors2(Accumulator& accumulator, unsigned int numElements)
+    Inline static void accumulate(Accumulator& accu, unsigned int numElements)
     {
         unsigned int restElements = numElements % vec_simd<1>::REGISTER_SIZE;
         unsigned int i = 0;
@@ -87,14 +87,14 @@ public:
         {
             for (i = 0; i < numElements - restElements; i += vec_simd<1>::REGISTER_SIZE)
             {
-                accumulator.loadData(i);
-                accumulator.accumulate();
+                accu.loadData(i);
+                accu.accumulate(i);
             }
         }
         if (restElements > 0)
         {
-            accumulator.loadRemainingData(i, restElements);
-            accumulator.accumulate();
+            accu.loadRemainingData(i, restElements);
+            accu.accumulate(i);
         }
     }
 };

@@ -5,26 +5,26 @@
 #include "StaticFor.h"
 
 //! This class stores 4 D-dimensional vectors. All operations are performed using SSE.
-template<int D>
+template<unsigned int D>
 class vec_simd
 {
 public:
     __m128 componentRegisters[D];
 
-    static const int REGISTER_SIZE = 4;
+    static const unsigned int REGISTER_SIZE = 4;
 
     typedef vec<D, float> vecf;
 
     Inline void setVecs(vecf vectors[4])
     {
-        StaticFor<0, D>::step( [&] (int d) {
+        StaticFor<0, D>::step( [&] (unsigned int d) {
             componentRegisters[d] = _mm_setr_ps(vectors[0][d], vectors[1][d], vectors[2][d], vectors[3][d]);
         });
     }
 
     Inline void setVecs(const vecf& v0, const vecf& v1, const vecf& v2, const vecf& v3)
     {
-        StaticFor<0, D>::step([&](int d) {
+        StaticFor<0, D>::step([&](unsigned int d) {
             componentRegisters[d] = _mm_setr_ps(v0[d], v1[d], v2[d], v3[d]);
         });
     }
@@ -74,13 +74,13 @@ public:
 
     template <unsigned int E = D> vec_simd(const vecf& v, typename std::enable_if<E >= 2, int>::type* = 0)
     {
-        StaticFor<0, D>::step([&](int d) { componentRegisters[d] = _mm_set1_ps(v[d]); });
+        StaticFor<0, D>::step([&](unsigned int d) { componentRegisters[d] = _mm_set1_ps(v[d]); });
     }
 
     void storeVecs(vecf& v0, vecf& v1, vecf& v2, vecf& v3) const
     {
         float buffer[4];
-        StaticFor<0, D>::step([&](int d) {
+        StaticFor<0, D>::step([&](unsigned int d) {
             _mm_storeu_ps(buffer, componentRegisters[d]);
             v0[d] = buffer[0];
             v1[d] = buffer[1];
@@ -95,12 +95,12 @@ public:
         storeVecs(func(0), func(1), func(2), func(3));
     }
 
-    void store(float* values, int d = 0) const
+    void store(float* values, unsigned int d = 0) const
     {
         _mm_storeu_ps(values, componentRegisters[d]);
     }
 
-    void load(const float* values, int d = 0)
+    void load(const float* values, unsigned int d = 0)
     {
         componentRegisters[d] = _mm_loadu_ps(values);
     }
@@ -116,7 +116,7 @@ public:
         func(3) = values[3];
     }
 
-    vec<4, float> operator()(int d) const
+    vec<4, float> operator()(unsigned int d) const
     {
         vec<4, float> out;
         store(&out[0], d);
@@ -125,42 +125,42 @@ public:
 
     void setZero()
     {
-        StaticFor<0, D>::step([&](int d) { componentRegisters[d] = _mm_setzero_ps(); });
+        StaticFor<0, D>::step([&](unsigned int d) { componentRegisters[d] = _mm_setzero_ps(); });
     }
 
     // Operators
     vec_simd<D>& operator+=(const vec_simd<D>& vector)
     {
-        StaticFor<0, D>::step( [&] (int d) { componentRegisters[d] = _mm_add_ps(componentRegisters[d], vector.componentRegisters[d]); });
+        StaticFor<0, D>::step( [&] (unsigned int d) { componentRegisters[d] = _mm_add_ps(componentRegisters[d], vector.componentRegisters[d]); });
         return *this;
     }
     vec_simd<D>& operator-=(const vec_simd<D>& vector)
     {
-        StaticFor<0, D>::step( [&] (int d) { componentRegisters[d] = _mm_sub_ps(componentRegisters[d], vector.componentRegisters[d]); });
+        StaticFor<0, D>::step( [&] (unsigned int d) { componentRegisters[d] = _mm_sub_ps(componentRegisters[d], vector.componentRegisters[d]); });
         return *this;
     }
     vec_simd<D>& operator*=(const vec_simd<1>& scalar)
     {
-        StaticFor<0, D>::step( [&] (int d) { componentRegisters[d] = _mm_mul_ps(componentRegisters[d], scalar.componentRegisters[0]); });
+        StaticFor<0, D>::step( [&] (unsigned int d) { componentRegisters[d] = _mm_mul_ps(componentRegisters[d], scalar.componentRegisters[0]); });
         return *this;
     }
     vec_simd<D>& operator/=(const vec_simd<1>& scalar)
     {
-        StaticFor<0, D>::step( [&] (int d) { componentRegisters[d] = _mm_div_ps(componentRegisters[d], scalar.componentRegisters[0]); });
+        StaticFor<0, D>::step( [&] (unsigned int d) { componentRegisters[d] = _mm_div_ps(componentRegisters[d], scalar.componentRegisters[0]); });
         return *this;
     }
 
     Inline vec_simd<D> elementWiseMultiplication(const vec_simd<D>& other) const
     {
         vec_simd<D> out;
-        StaticFor<0, D>::step( [&] (int d) { out.componentRegisters[d] = _mm_mul_ps(componentRegisters[d], other.componentRegisters[d]); });
+        StaticFor<0, D>::step( [&] (unsigned int d) { out.componentRegisters[d] = _mm_mul_ps(componentRegisters[d], other.componentRegisters[d]); });
         return out;
     }
 
     vec_simd<D> elementWiseDivision(const vec_simd<D>& other) const
     {
         vec_simd<D> out;
-        StaticFor<0, D>::step([&](int d) { out.componentRegisters[d] = _mm_div_ps(componentRegisters[d], other.componentRegisters[d]); });
+        StaticFor<0, D>::step([&](unsigned int d) { out.componentRegisters[d] = _mm_div_ps(componentRegisters[d], other.componentRegisters[d]); });
         return out;
     }
 
@@ -168,7 +168,7 @@ public:
     {
         vec_simd<1> out;
         out.componentRegisters[0] = _mm_mul_ps(componentRegisters[0], other.componentRegisters[0]);
-        StaticFor<1, D>::step([&](int d) {
+        StaticFor<1, D>::step([&](unsigned int d) {
             out.componentRegisters[0] = _mm_add_ps(out.componentRegisters[0], _mm_mul_ps(componentRegisters[d], other.componentRegisters[d]));
         });
         return out;
@@ -176,7 +176,7 @@ public:
 
     void sqrt()
     {
-        StaticFor<0, D>::step( [&] (int d) { componentRegisters[d] = _mm_sqrt_ps(componentRegisters[d]); });
+        StaticFor<0, D>::step( [&] (unsigned int d) { componentRegisters[d] = _mm_sqrt_ps(componentRegisters[d]); });
     }
 
     static vec_simd<1> sqrt(vec_simd<1> in)
@@ -196,7 +196,7 @@ public:
     Inline vecf horizontalAdd() const
     {
         vecf out;
-        StaticFor<0, D>::step([&](int d){
+        StaticFor<0, D>::step([&](unsigned int d){
             __m128 x = _mm_hadd_ps(componentRegisters[d], componentRegisters[d]);
             x = _mm_hadd_ps(x, x);
             _mm_store_ss(&out[d], x);
@@ -260,109 +260,109 @@ public:
     }
 };
 
-template<int D>
+template<unsigned int D>
 vec_simd<D> operator+(const vec_simd<D>& v1, const vec_simd<D>& v2)
 {
     vec_simd<D> out;
-    StaticFor<0, D>::step( [&v1, &v2, &out] (int d) { out.componentRegisters[d] = _mm_add_ps(v1.componentRegisters[d], v2.componentRegisters[d]); });
+    StaticFor<0, D>::step( [&v1, &v2, &out] (unsigned int d) { out.componentRegisters[d] = _mm_add_ps(v1.componentRegisters[d], v2.componentRegisters[d]); });
     return out;
 }
 
-template<int D>
+template<unsigned int D>
 vec_simd<D> operator-(const vec_simd<D>& v1, const vec_simd<D>& v2)
 {
     vec_simd<D> out;
-    StaticFor<0, D>::step( [&v1, &v2, &out] (int d) { out.componentRegisters[d] = _mm_sub_ps(v1.componentRegisters[d], v2.componentRegisters[d]); });
+    StaticFor<0, D>::step( [&v1, &v2, &out] (unsigned int d) { out.componentRegisters[d] = _mm_sub_ps(v1.componentRegisters[d], v2.componentRegisters[d]); });
     return out;
 }
 
-template<int D>
+template<unsigned int D>
 vec_simd<D> operator*(const vec_simd<1>& scalar, const vec_simd<D>& v)
 {
     vec_simd<D> out;
-    StaticFor<0, D>::step( [&scalar, &v, &out] (int d) { out.componentRegisters[d] = _mm_mul_ps(scalar.componentRegisters[0], v.componentRegisters[d]); });
+    StaticFor<0, D>::step( [&scalar, &v, &out] (unsigned int d) { out.componentRegisters[d] = _mm_mul_ps(scalar.componentRegisters[0], v.componentRegisters[d]); });
     return out;
 }
 
-template<int D>
+template<unsigned int D>
 typename std::enable_if<D != 1, vec_simd<D> >::type operator*(const vec_simd<D>& v, const vec_simd<1>& scalar)
 {
     return scalar * v;
 }
 
-template<int D>
+template<unsigned int D>
 vec_simd<D> operator/(const vec_simd<D>& v, const vec_simd<1>& scalar)
 {
     vec_simd<D> out;
-    StaticFor<0, D>::step( [&scalar, &v, &out] (int d) { out.componentRegisters[d] = _mm_div_ps(v.componentRegisters[d], scalar.componentRegisters[0]); });
+    StaticFor<0, D>::step( [&scalar, &v, &out] (unsigned int d) { out.componentRegisters[d] = _mm_div_ps(v.componentRegisters[d], scalar.componentRegisters[0]); });
     return out;
 }
 
-template<int D>
+template<unsigned int D>
 vec_simd<D> operator-(const vec_simd<D>& v)
 {
     vec_simd<D> out;
-    StaticFor<0, D>::step( [&v, &out] (int d) { out.componentRegisters[d] = _mm_xor_ps(v.componentRegisters[d], _mm_set1_ps(-0.f)); });
+    StaticFor<0, D>::step( [&v, &out] (unsigned int d) { out.componentRegisters[d] = _mm_xor_ps(v.componentRegisters[d], _mm_set1_ps(-0.f)); });
     return out;
 }
 
 // Bitwise operations (sometimes useful to eliminate branching).
-template<int D>
+template<unsigned int D>
 vec_simd<D> operator&(const vec_simd<D>& v1, const vec_simd<D>& v2)
 {
     vec_simd<D> out;
-    StaticFor<0, D>::step( [&v1, &v2, &out] (int d) { out.componentRegisters[d] = _mm_and_ps(v1.componentRegisters[d], v2.componentRegisters[d]); });
+    StaticFor<0, D>::step( [&v1, &v2, &out] (unsigned int d) { out.componentRegisters[d] = _mm_and_ps(v1.componentRegisters[d], v2.componentRegisters[d]); });
     return out;
 }
-template<int D>
+template<unsigned int D>
 vec_simd<D> operator|(const vec_simd<D>& v1, const vec_simd<D>& v2)
 {
     vec_simd<D> out;
-    StaticFor<0, D>::step( [&v1, &v2, &out] (int d) { out.componentRegisters[d] = _mm_or_ps(v1.componentRegisters[d], v2.componentRegisters[d]); });
+    StaticFor<0, D>::step( [&v1, &v2, &out] (unsigned int d) { out.componentRegisters[d] = _mm_or_ps(v1.componentRegisters[d], v2.componentRegisters[d]); });
     return out;
 }
-template<int D>
+template<unsigned int D>
 vec_simd<D> operator^(const vec_simd<D>& v1, const vec_simd<D>& v2)
 {
     vec_simd<D> out;
-    StaticFor<0, D>::step( [&v1, &v2, &out] (int d) { out.componentRegisters[d] = _mm_xor_ps(v1.componentRegisters[d], v2.componentRegisters[d]); });
+    StaticFor<0, D>::step( [&v1, &v2, &out] (unsigned int d) { out.componentRegisters[d] = _mm_xor_ps(v1.componentRegisters[d], v2.componentRegisters[d]); });
     return out;
 }
 
 // Comparison operators
-template<int D>
+template<unsigned int D>
 vec_simd<D> operator>(const vec_simd<D>& v1, const vec_simd<D>& v2)
 {
     vec_simd<D> out;
-    StaticFor<0, D>::step( [&v1, &v2, &out] (int d) { out.componentRegisters[d] = _mm_cmpgt_ps(v1.componentRegisters[d], v2.componentRegisters[d]); });
+    StaticFor<0, D>::step( [&v1, &v2, &out] (unsigned int d) { out.componentRegisters[d] = _mm_cmpgt_ps(v1.componentRegisters[d], v2.componentRegisters[d]); });
     return out;
 }
-template<int D>
+template<unsigned int D>
 vec_simd<D> operator>=(const vec_simd<D>& v1, const vec_simd<D>& v2)
 {
     vec_simd<D> out;
-    StaticFor<0, D>::step( [&v1, &v2, &out] (int d) { out.componentRegisters[d] = _mm_cmpge_ps(v1.componentRegisters[d], v2.componentRegisters[d]); });
+    StaticFor<0, D>::step( [&v1, &v2, &out] (unsigned int d) { out.componentRegisters[d] = _mm_cmpge_ps(v1.componentRegisters[d], v2.componentRegisters[d]); });
     return out;
 }
-template<int D>
+template<unsigned int D>
 vec_simd<D> operator<(const vec_simd<D>& v1, const vec_simd<D>& v2)
 {
     vec_simd<D> out;
-    StaticFor<0, D>::step( [&v1, &v2, &out] (int d) { out.componentRegisters[d] = _mm_cmplt_ps(v1.componentRegisters[d], v2.componentRegisters[d]); });
+    StaticFor<0, D>::step( [&v1, &v2, &out] (unsigned int d) { out.componentRegisters[d] = _mm_cmplt_ps(v1.componentRegisters[d], v2.componentRegisters[d]); });
     return out;
 }
-template<int D>
+template<unsigned int D>
 vec_simd<D> operator<=(const vec_simd<D>& v1, const vec_simd<D>& v2)
 {
     vec_simd<D> out;
-    StaticFor<0, D>::step( [&v1, &v2, &out] (int d) { out.componentRegisters[d] = _mm_cmple_ps(v1.componentRegisters[d], v2.componentRegisters[d]); });
+    StaticFor<0, D>::step( [&v1, &v2, &out] (unsigned int d) { out.componentRegisters[d] = _mm_cmple_ps(v1.componentRegisters[d], v2.componentRegisters[d]); });
     return out;
 }
-template<int D>
+template<unsigned int D>
 vec_simd<D> operator==(const vec_simd<D>& v1, const vec_simd<D>& v2)
 {
     vec_simd<D> out;
-    StaticFor<0, D>::step( [&v1, &v2, &out] (int d) { out.componentRegisters[d] = _mm_cmpeq_ps(v1.componentRegisters[d], v2.componentRegisters[d]); });
+    StaticFor<0, D>::step( [&v1, &v2, &out] (unsigned int d) { out.componentRegisters[d] = _mm_cmpeq_ps(v1.componentRegisters[d], v2.componentRegisters[d]); });
     return out;
 }
 

@@ -5,7 +5,7 @@
 #include "StaticFor.h"
 
 //! This class stores 4 D-dimensional vectors. All operations are performed using SSE.
-template<int D>
+template<unsigned int D>
 class vec_simd
 {
 public:
@@ -15,7 +15,7 @@ public:
 
     Inline void setVecs(const vec<D, float>& v0, const vec<D, float>& v1, const vec<D, float>& v2, const vec<D, float>& v3, const vec<D, float>& v4, const vec<D, float>& v5, const vec<D, float>& v6, const vec<D, float>& v7)
     {
-        StaticFor<0, D>::step( [&] (int d) { this->componentRegisters[d] = _mm256_setr_ps(v0[d], v1[d], v2[d], v3[d], v4[d], v5[d], v6[d], v7[d]); });
+        StaticFor<0, D>::step( [&] (unsigned int d) { this->componentRegisters[d] = _mm256_setr_ps(v0[d], v1[d], v2[d], v3[d], v4[d], v5[d], v6[d], v7[d]); });
     }
 
     template<class Getter>
@@ -71,13 +71,13 @@ public:
 
     template <unsigned int E = D> vec_simd(const vec<D, float>& v, typename std::enable_if<E >= 2, int>::type* = 0)
     {
-        StaticFor<0, D>::step([this, &v](int d) { componentRegisters[d] = _mm256_set1_ps(v[d]); });
+        StaticFor<0, D>::step([this, &v](unsigned int d) { componentRegisters[d] = _mm256_set1_ps(v[d]); });
     }
 
     void getVecs(vec<D, float>& v0, vec<D, float>& v1, vec<D, float>& v2, vec<D, float>& v3, vec<D, float>& v4, vec<D, float>& v5, vec<D, float>& v6, vec<D, float>& v7) const
     {
         float buffer[8];
-        StaticFor<0, D>::step( [&] (int d) {
+        StaticFor<0, D>::step( [&] (unsigned int d) {
             _mm256_storeu_ps(buffer, this->componentRegisters[d]);
             v0[d] = buffer[0];
             v1[d] = buffer[1];
@@ -90,7 +90,7 @@ public:
         });
     }
 
-    void store(float* values, int d) const
+    void store(float* values, unsigned int d) const
     {
         _mm256_storeu_ps(values, componentRegisters[d]);
     }
@@ -116,7 +116,7 @@ public:
         func(7) = values[7];
     }
 
-    vec<4, float> operator()(int d) const
+    vec<4, float> operator()(unsigned int d) const
     {
         vec<4, float> out;
         store(&out[0], d);
@@ -125,42 +125,42 @@ public:
 
     void setZero()
     {
-        StaticFor<0, D>::step( [this] (int d) { this->componentRegisters[d] = _mm256_setzero_ps(); });
+        StaticFor<0, D>::step( [this] (unsigned int d) { this->componentRegisters[d] = _mm256_setzero_ps(); });
     }
 
     // Operators
     vec_simd<D>& operator+=(const vec_simd<D>& vector)
     {
-        StaticFor<0, D>::step( [this, &vector] (int d) { this->componentRegisters[d] = _mm256_add_ps(this->componentRegisters[d], vector.componentRegisters[d]); });
+        StaticFor<0, D>::step( [this, &vector] (unsigned int d) { this->componentRegisters[d] = _mm256_add_ps(this->componentRegisters[d], vector.componentRegisters[d]); });
         return *this;
     }
     vec_simd<D>& operator-=(const vec_simd<D>& vector)
     {
-        StaticFor<0, D>::step( [this, &vector] (int d) { this->componentRegisters[d] = _mm256_sub_ps(this->componentRegisters[d], vector.componentRegisters[d]); });
+        StaticFor<0, D>::step( [this, &vector] (unsigned int d) { this->componentRegisters[d] = _mm256_sub_ps(this->componentRegisters[d], vector.componentRegisters[d]); });
         return *this;
     }
     vec_simd<D>& operator*=(const vec_simd<1>& scalar)
     {
-        StaticFor<0, D>::step( [this, &scalar] (int d) { this->componentRegisters[d] = _mm256_mul_ps(this->componentRegisters[d], scalar.componentRegisters[0]); });
+        StaticFor<0, D>::step( [this, &scalar] (unsigned int d) { this->componentRegisters[d] = _mm256_mul_ps(this->componentRegisters[d], scalar.componentRegisters[0]); });
         return *this;
     }
     vec_simd<D>& operator/=(const vec_simd<1>& scalar)
     {
-        StaticFor<0, D>::step( [this, &scalar] (int d) { this->componentRegisters[d] = _mm256_div_ps(this->componentRegisters[d], scalar.componentRegisters[0]); });
+        StaticFor<0, D>::step( [this, &scalar] (unsigned int d) { this->componentRegisters[d] = _mm256_div_ps(this->componentRegisters[d], scalar.componentRegisters[0]); });
         return *this;
     }
 
     Inline vec_simd<D> elementWiseMultiplication(const vec_simd<D>& other) const
     {
         vec_simd<D> out;
-        StaticFor<0, D>::step( [this, &other, &out] (int d) { out.componentRegisters[d] = _mm256_mul_ps(this->componentRegisters[d], other.componentRegisters[d]); });
+        StaticFor<0, D>::step( [this, &other, &out] (unsigned int d) { out.componentRegisters[d] = _mm256_mul_ps(this->componentRegisters[d], other.componentRegisters[d]); });
         return out;
     }
 
     vec_simd<D> elementWiseDivision(const vec_simd<D>& other) const
     {
         vec_simd<D> out;
-        StaticFor<0, D>::step( [this, &other, &out] (int d) { out.componentRegisters[d] = _mm256_div_ps(this->componentRegisters[d], other.componentRegisters[d]); });
+        StaticFor<0, D>::step( [this, &other, &out] (unsigned int d) { out.componentRegisters[d] = _mm256_div_ps(this->componentRegisters[d], other.componentRegisters[d]); });
         return out;
     }
 
@@ -168,7 +168,7 @@ public:
     {
         vec_simd<1> out;
         out.componentRegisters[0] = _mm256_mul_ps(componentRegisters[0], other.componentRegisters[0]);
-        StaticFor<1, D>::step( [this, &other, &out] (int d) {
+        StaticFor<1, D>::step( [this, &other, &out] (unsigned int d) {
             out.componentRegisters[0] = _mm256_add_ps(out.componentRegisters[0], _mm256_mul_ps(this->componentRegisters[d], other.componentRegisters[d]));
         });
         return out;
@@ -176,7 +176,7 @@ public:
 
     void sqrt()
     {
-        StaticFor<0, D>::step( [this] (int d) { this->componentRegisters[d] = _mm256_sqrt_ps(this->componentRegisters[d]); });
+        StaticFor<0, D>::step( [this] (unsigned int d) { this->componentRegisters[d] = _mm256_sqrt_ps(this->componentRegisters[d]); });
     }
 
     vec_simd<1> length()
@@ -191,9 +191,9 @@ public:
     {
         float tmp[8];
         vec<D, float> out;
-        StaticFor<0, D>::step([&](int d){
+        StaticFor<0, D>::step([&](unsigned int d){
             _mm256_storeu_ps(tmp, componentRegisters[d]);
-            for (int i = 0; i < 8; i++)
+            for (unsigned int i = 0; i < 8; i++)
                 out[d] += tmp[i];
             /*__m256 x = _mm256_hadd_ps(this->componentRegisters[d], this->componentRegisters[d]);
             x = _mm256_hadd_ps(x, x);
@@ -262,109 +262,109 @@ public:
     }
 };
 
-template<int D>
+template<unsigned int D>
 vec_simd<D> operator+(const vec_simd<D>& v1, const vec_simd<D>& v2)
 {
     vec_simd<D> out;
-    StaticFor<0, D>::step( [&v1, &v2, &out] (int d) { out.componentRegisters[d] = _mm256_add_ps(v1.componentRegisters[d], v2.componentRegisters[d]); });
+    StaticFor<0, D>::step( [&v1, &v2, &out] (unsigned int d) { out.componentRegisters[d] = _mm256_add_ps(v1.componentRegisters[d], v2.componentRegisters[d]); });
     return out;
 }
 
-template<int D>
+template<unsigned int D>
 vec_simd<D> operator-(const vec_simd<D>& v1, const vec_simd<D>& v2)
 {
     vec_simd<D> out;
-    StaticFor<0, D>::step( [&v1, &v2, &out] (int d) { out.componentRegisters[d] = _mm256_sub_ps(v1.componentRegisters[d], v2.componentRegisters[d]); });
+    StaticFor<0, D>::step( [&v1, &v2, &out] (unsigned int d) { out.componentRegisters[d] = _mm256_sub_ps(v1.componentRegisters[d], v2.componentRegisters[d]); });
     return out;
 }
 
-template<int D>
+template<unsigned int D>
 vec_simd<D> operator*(const vec_simd<1>& scalar, const vec_simd<D>& v)
 {
     vec_simd<D> out;
-    StaticFor<0, D>::step( [&scalar, &v, &out] (int d) { out.componentRegisters[d] = _mm256_mul_ps(scalar.componentRegisters[0], v.componentRegisters[d]); });
+    StaticFor<0, D>::step( [&scalar, &v, &out] (unsigned int d) { out.componentRegisters[d] = _mm256_mul_ps(scalar.componentRegisters[0], v.componentRegisters[d]); });
     return out;
 }
 
-template<int D>
+template<unsigned int D>
 typename std::enable_if<D != 1, vec_simd<D> >::type operator*(const vec_simd<D>& v, const vec_simd<1>& scalar)
 {
     return scalar * v;
 }
 
-template<int D>
+template<unsigned int D>
 vec_simd<D> operator/(const vec_simd<D>& v, const vec_simd<1>& scalar)
 {
     vec_simd<D> out;
-    StaticFor<0, D>::step( [&scalar, &v, &out] (int d) { out.componentRegisters[d] = _mm256_div_ps(v.componentRegisters[d], scalar.componentRegisters[0]); });
+    StaticFor<0, D>::step( [&scalar, &v, &out] (unsigned int d) { out.componentRegisters[d] = _mm256_div_ps(v.componentRegisters[d], scalar.componentRegisters[0]); });
     return out;
 }
 
-template<int D>
+template<unsigned int D>
 vec_simd<D> operator-(const vec_simd<D>& v)
 {
     vec_simd<D> out;
-    StaticFor<0, D>::step( [&v, &out] (int d) { out.componentRegisters[d] = _mm256_xor_ps(v.componentRegisters[d], _mm256_set1_ps(-0.f)); });
+    StaticFor<0, D>::step( [&v, &out] (unsigned int d) { out.componentRegisters[d] = _mm256_xor_ps(v.componentRegisters[d], _mm256_set1_ps(-0.f)); });
     return out;
 }
 
 // Bitwise operations (sometimes useful to eliminate branching).
-template<int D>
+template<unsigned int D>
 vec_simd<D> operator&(const vec_simd<D>& v1, const vec_simd<D>& v2)
 {
     vec_simd<D> out;
-    StaticFor<0, D>::step( [&v1, &v2, &out] (int d) { out.componentRegisters[d] = _mm256_and_ps(v1.componentRegisters[d], v2.componentRegisters[d]); });
+    StaticFor<0, D>::step( [&v1, &v2, &out] (unsigned int d) { out.componentRegisters[d] = _mm256_and_ps(v1.componentRegisters[d], v2.componentRegisters[d]); });
     return out;
 }
-template<int D>
+template<unsigned int D>
 vec_simd<D> operator|(const vec_simd<D>& v1, const vec_simd<D>& v2)
 {
     vec_simd<D> out;
-    StaticFor<0, D>::step( [&v1, &v2, &out] (int d) { out.componentRegisters[d] = _mm256_or_ps(v1.componentRegisters[d], v2.componentRegisters[d]); });
+    StaticFor<0, D>::step( [&v1, &v2, &out] (unsigned int d) { out.componentRegisters[d] = _mm256_or_ps(v1.componentRegisters[d], v2.componentRegisters[d]); });
     return out;
 }
-template<int D>
+template<unsigned int D>
 vec_simd<D> operator^(const vec_simd<D>& v1, const vec_simd<D>& v2)
 {
     vec_simd<D> out;
-    StaticFor<0, D>::step( [&v1, &v2, &out] (int d) { out.componentRegisters[d] = _mm256_xor_ps(v1.componentRegisters[d], v2.componentRegisters[d]); });
+    StaticFor<0, D>::step( [&v1, &v2, &out] (unsigned int d) { out.componentRegisters[d] = _mm256_xor_ps(v1.componentRegisters[d], v2.componentRegisters[d]); });
     return out;
 }
 
 // Comparison operators
-template<int D>
+template<unsigned int D>
 vec_simd<D> operator>(const vec_simd<D>& v1, const vec_simd<D>& v2)
 {
     vec_simd<D> out;
-    StaticFor<0, D>::step( [&v1, &v2, &out] (int d) { out.componentRegisters[d] = _mm256_cmp_ps(v1.componentRegisters[d], v2.componentRegisters[d], _CMP_GT_OQ); });
+    StaticFor<0, D>::step( [&v1, &v2, &out] (unsigned int d) { out.componentRegisters[d] = _mm256_cmp_ps(v1.componentRegisters[d], v2.componentRegisters[d], _CMP_GT_OQ); });
     return out;
 }
-template<int D>
+template<unsigned int D>
 vec_simd<D> operator>=(const vec_simd<D>& v1, const vec_simd<D>& v2)
 {
     vec_simd<D> out;
-    StaticFor<0, D>::step( [&v1, &v2, &out] (int d) { out.componentRegisters[d] = _mm256_cmp_ps(v1.componentRegisters[d], v2.componentRegisters[d], _CMP_GE_OQ); });
+    StaticFor<0, D>::step( [&v1, &v2, &out] (unsigned int d) { out.componentRegisters[d] = _mm256_cmp_ps(v1.componentRegisters[d], v2.componentRegisters[d], _CMP_GE_OQ); });
     return out;
 }
-template<int D>
+template<unsigned int D>
 vec_simd<D> operator<(const vec_simd<D>& v1, const vec_simd<D>& v2)
 {
     vec_simd<D> out;
-    StaticFor<0, D>::step( [&v1, &v2, &out] (int d) { out.componentRegisters[d] = _mm256_cmp_ps(v1.componentRegisters[d], v2.componentRegisters[d], _CMP_LT_OQ); });
+    StaticFor<0, D>::step( [&v1, &v2, &out] (unsigned int d) { out.componentRegisters[d] = _mm256_cmp_ps(v1.componentRegisters[d], v2.componentRegisters[d], _CMP_LT_OQ); });
     return out;
 }
-template<int D>
+template<unsigned int D>
 vec_simd<D> operator<=(const vec_simd<D>& v1, const vec_simd<D>& v2)
 {
     vec_simd<D> out;
-    StaticFor<0, D>::step( [&v1, &v2, &out] (int d) { out.componentRegisters[d] = _mm256_cmp_ps(v1.componentRegisters[d], v2.componentRegisters[d], _CMP_LE_OQ); });
+    StaticFor<0, D>::step( [&v1, &v2, &out] (unsigned int d) { out.componentRegisters[d] = _mm256_cmp_ps(v1.componentRegisters[d], v2.componentRegisters[d], _CMP_LE_OQ); });
     return out;
 }
-template<int D>
+template<unsigned int D>
 vec_simd<D> operator==(const vec_simd<D>& v1, const vec_simd<D>& v2)
 {
     vec_simd<D> out;
-    StaticFor<0, D>::step( [&v1, &v2, &out] (int d) { out.componentRegisters[d] = _mm256_cmp_ps(v1.componentRegisters[d], v2.componentRegisters[d], _CMP_EQ_OQ); });
+    StaticFor<0, D>::step( [&v1, &v2, &out] (unsigned int d) { out.componentRegisters[d] = _mm256_cmp_ps(v1.componentRegisters[d], v2.componentRegisters[d], _CMP_EQ_OQ); });
     return out;
 }
 
