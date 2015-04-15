@@ -36,15 +36,15 @@ float computeAverage(float* valuesIn, size_t numElements)
     double sum = 0;
     for (size_t i = 0; i < numElements; i++)
         sum += (double)valuesIn[i];
-    return sum / numElements;
+    return (float)(sum / numElements);
 }
 
-struct ComputeAverageAccu
+struct ComputeSumAccu
 {
 	vec_simd<1> sum = vec_simd<1>(0.0f);
 	vec_simd<1> offset;
 	float* values;
-	ComputeAverageAccu(float* values) : values(values) {}
+    ComputeSumAccu(float* values) : values(values) {}
 	
 	void loadData(unsigned int i) { offset.load(values + i); }
 	void loadRemainingData(unsigned int i, unsigned int numElements)
@@ -54,14 +54,14 @@ struct ComputeAverageAccu
 			numElements, 0.0f);
 	}
 	
-	void accumulate(int) { sum += offset; }
+	void accumulate(unsigned int) { sum += offset; }
 };
 
 float computeAverageSimd(float* valuesIn, size_t numElements)
 {
-	ComputeAverageAccu accu(valuesIn);
-	SimdUtils::accumulate(accu, numElements);
-	accu.sum /= vec_simd<1>(numElements);
+    ComputeSumAccu accu(valuesIn);
+	SimdUtils::accumulate(accu, (unsigned int)numElements);
+	accu.sum /= vec_simd<1>((float)numElements);
     return accu.sum.horizontalAdd()[0];
 }
 
@@ -121,7 +121,7 @@ void computeSqrtsCondSimdNice(const vector<float>& in, vector<float>& out, size_
 
 void computeSquareRootsNoAutoVectorization(vector<float>& in, vector<float>& out, size_t n)
 {
-// #pragma loop(no_vector)
+#pragma loop(no_vector)
     for (size_t i = 0; i < n; i++)
         out[i] = std::sqrt(in[i]);
 }
@@ -161,7 +161,7 @@ void normalizeVecsSimdCond(const vec3fArray& in, vec3fArray& out, size_t n)
 void normalizeVecsSimdMap(vec3fArray& in, vec3fArray& out, size_t n)
 {
     SimdUtils::Normalize3DMapper mapper(in.data(), out.data());
-    SimdUtils::mapVectors<SimdUtils::Normalize3DMapper, 3>(mapper, n);
+    SimdUtils::mapVectors<SimdUtils::Normalize3DMapper, 3>(mapper, (unsigned int)n);
 }
 
 void benchmarkComputeSqrts()
@@ -238,7 +238,9 @@ int main()
 {
     benchmarkComputeSqrts();
 
+#ifdef _MSC_VER
     while (true) {}
+#endif
 
     return 0;
 }

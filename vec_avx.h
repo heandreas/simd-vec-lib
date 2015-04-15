@@ -74,7 +74,7 @@ public:
         StaticFor<0, D>::step([this, &v](unsigned int d) { componentRegisters[d] = _mm256_set1_ps(v[d]); });
     }
 
-    void getVecs(vec<D, float>& v0, vec<D, float>& v1, vec<D, float>& v2, vec<D, float>& v3, vec<D, float>& v4, vec<D, float>& v5, vec<D, float>& v6, vec<D, float>& v7) const
+    void storeVecs(vec<D, float>& v0, vec<D, float>& v1, vec<D, float>& v2, vec<D, float>& v3, vec<D, float>& v4, vec<D, float>& v5, vec<D, float>& v6, vec<D, float>& v7) const
     {
         float buffer[8];
         StaticFor<0, D>::step( [&] (unsigned int d) {
@@ -90,7 +90,7 @@ public:
         });
     }
 
-    void store(float* values, unsigned int d) const
+    void store(float* values, unsigned int d = 0) const
     {
         _mm256_storeu_ps(values, componentRegisters[d]);
     }
@@ -98,7 +98,7 @@ public:
     template<class Getter>
     Inline void storeVecs(const Getter& func)
     {
-        getVecs(func(0), func(1), func(2), func(3), func(4), func(5), func(6), func(7));
+        storeVecs(func(0), func(1), func(2), func(3), func(4), func(5), func(6), func(7));
     }
 
     template<class Getter>
@@ -114,6 +114,11 @@ public:
         func(5) = values[5];
         func(6) = values[6];
         func(7) = values[7];
+    }
+
+    void load(const float* values, unsigned int d = 0)
+    {
+        componentRegisters[d] = _mm256_loadu_ps(values);
     }
 
     vec<4, float> operator()(unsigned int d) const
@@ -177,6 +182,12 @@ public:
     void sqrt()
     {
         StaticFor<0, D>::step( [this] (unsigned int d) { this->componentRegisters[d] = _mm256_sqrt_ps(this->componentRegisters[d]); });
+    }
+
+    static vec_simd<1> sqrt(vec_simd<1> in)
+    {
+        in.sqrt();
+        return in;
     }
 
     vec_simd<1> length()
