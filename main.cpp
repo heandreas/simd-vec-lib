@@ -106,11 +106,11 @@ void computeSqrtsConditionalSimd(vector<float>& in, vector<float>& out, size_t n
     }
 }
 
-void computeSqrtsCondSimdNice(const vector<float>& in, vector<float>& out)
+void computeSqrtsCondSimdNice(const vector<float>& in, vector<float>& out, size_t n)
 {
     vec_simd<1> v;
     vec_simd<1> zero(0.0f);
-    for (size_t i = 0; i < in.size(); i += 4)
+    for (size_t i = 0; i < n; i += 4)
     {
         v.load(&in[i]);
         v = SimdUtils::choose(v >= zero,
@@ -131,8 +131,7 @@ void normalizeVecs(vec3fArray& in, vec3fArray& out, size_t n)
     for (size_t i = 0; i < n; i++)
     {
         float length = in[i].length();
-        if (length > 0)
-            out[i] = in[i] / length;    // in[i].length();
+        out[i] = in[i] / length;    // in[i].length();
     }
 }
 
@@ -159,35 +158,33 @@ void normalizeVecsSimdCond(const vec3fArray& in, vec3fArray& out, size_t n)
     }
 }
 
-void normalizeVecsSimd2(vec3fArray& in, vec3fArray& out, size_t n)
+void normalizeVecsSimdMap(vec3fArray& in, vec3fArray& out, size_t n)
 {
     SimdUtils::Normalize3DMapper mapper(in.data(), out.data());
     SimdUtils::mapVectors<SimdUtils::Normalize3DMapper, 3>(mapper, n);
 }
 
-int main()
+void benchmarkComputeSqrts()
 {
     const size_t numElements = 8 * 10000000;
-    vec3fArray vecsIn(numElements);
-    vec3fArray vecsOut(numElements);
-    memset(vecsOut.data(), 0, numElements * sizeof(vec3f));
-    fillFloatArrayRandom(&vecsIn[0][0], numElements * 3);
-
     vector<float> valuesIn(numElements);
     vector<float> valuesOut(numElements);
     memset(valuesOut.data(), 0, numElements * sizeof(float));
     fillFloatArrayRandom(valuesIn.data(), numElements);
 
+    std::cout << "Benchmarking computeSquareRoots..." << std::endl;
     benchmarkhelper::benchmark(5, computeSquareRoots, valuesIn, valuesOut, numElements);
     std::cout << computeAverage(valuesOut.data(), numElements) << std::endl;
 
     memset(valuesOut.data(), 0, numElements * sizeof(float));
 
+    std::cout << "Benchmarking computeSquareRootsSimd..." << std::endl;
     benchmarkhelper::benchmark(5, computeSquareRootsSimd, valuesIn, valuesOut, numElements);
-    std::cout << computeAverageSimd(valuesOut.data(), numElements) << std::endl;
+    std::cout << computeAverage(valuesOut.data(), numElements) << std::endl;
 
     memset(valuesOut.data(), 0, numElements * sizeof(float));
 
+    std::cout << "Benchmarking computeSquareRootsNoAutoVectorization..." << std::endl;
     benchmarkhelper::benchmark(5, computeSquareRootsNoAutoVectorization, valuesIn, valuesOut, numElements);
     std::cout << computeAverage(valuesOut.data(), numElements) << std::endl;
 
@@ -195,27 +192,51 @@ int main()
 
     fillFloatArrayRandom(valuesIn.data(), numElements, -100.0f);
 
+    std::cout << "Benchmarking computeSqrtsConditional..." << std::endl;
     benchmarkhelper::benchmark(5, computeSqrtsConditional, valuesIn, valuesOut, numElements);
     std::cout << computeAverage(valuesOut.data(), numElements) << std::endl;
 
     memset(valuesOut.data(), 0, numElements * sizeof(float));
 
+    std::cout << "Benchmarking computeSqrtsConditionalSimd..." << std::endl;
     benchmarkhelper::benchmark(5, computeSqrtsConditionalSimd, valuesIn, valuesOut, numElements);
     std::cout << computeAverage(valuesOut.data(), numElements) << std::endl;
 
-    benchmarkhelper::benchmark(5, normalizeVecsSimdCond, vecsIn, vecsOut, numElements);
+    std::cout << "Benchmarking computeSqrtsCondSimdNice..." << std::endl;
+    benchmarkhelper::benchmark(5, computeSqrtsCondSimdNice, valuesIn, valuesOut, numElements);
+    std::cout << computeAverage(valuesOut.data(), numElements) << std::endl;
+}
 
+void benchmarkVectorNormalizationAoS()
+{
+    const size_t numElements = 4 * 10000000;
+    vec3fArray vecsIn(numElements);
+    vec3fArray vecsOut(numElements);
     memset(vecsOut.data(), 0, numElements * sizeof(vec3f));
+    fillFloatArrayRandom(&vecsIn[0][0], numElements * 3);
 
+    std::cout << "Benchmarking normalizeVecs..." << std::endl;
     benchmarkhelper::benchmark(5, normalizeVecs, vecsIn, vecsOut, numElements);
 
     memset(vecsOut.data(), 0, numElements * sizeof(vec3f));
 
+    std::cout << "Benchmarking normalizeVecsSimd..." << std::endl;
     benchmarkhelper::benchmark(5, normalizeVecsSimd, vecsIn, vecsOut, numElements);
 
     memset(vecsOut.data(), 0, numElements * sizeof(vec3f));
 
-    benchmarkhelper::benchmark(5, normalizeVecsSimd2, vecsIn, vecsOut, numElements);
+    std::cout << "Benchmarking normalizeVecsSimd2..." << std::endl;
+    benchmarkhelper::benchmark(5, normalizeVecsSimdMap, vecsIn, vecsOut, numElements);
+
+    memset(vecsOut.data(), 0, numElements * sizeof(vec3f));
+
+    std::cout << "Benchmarking normalizeVecsSimdCond..." << std::endl;
+    benchmarkhelper::benchmark(5, normalizeVecsSimdCond, vecsIn, vecsOut, numElements);
+}
+
+int main()
+{
+    benchmarkComputeSqrts();
 
     while (true) {}
 

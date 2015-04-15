@@ -31,9 +31,9 @@ public:
 #ifdef USE_AVX
             out.componentRegisters[d] = _mm256_blendv_ps(v2.componentRegisters[d], v1.componentRegisters[d], mask.componentRegisters[0]);
 #else
-            out.componentRegisters[d] = _mm_blendv_ps(v2.componentRegisters[d], v1.componentRegisters[d], mask.componentRegisters[0]);
-            // out.componentRegisters[d] = _mm_or_ps(_mm_and_ps(mask.componentRegisters[0], v1.componentRegisters[d]),
-            //                                      _mm_andnot_ps(mask.componentRegisters[0], v2.componentRegisters[d]));
+            //out.componentRegisters[d] = _mm_blendv_ps(v2.componentRegisters[d], v1.componentRegisters[d], mask.componentRegisters[0]);
+            out.componentRegisters[d] = _mm_or_ps(_mm_and_ps(mask.componentRegisters[0], v1.componentRegisters[d]),
+                _mm_andnot_ps(mask.componentRegisters[0], v2.componentRegisters[d]));
 #endif
         });
         return out;
